@@ -9,7 +9,6 @@ import re
 VOICE = "bn-BD-NabanitaNeural"
 
 async def generate_emotional_audio(text):
-    # কোনো SSML ট্যাগ ছাড়া সরাসরি টেক্সট পাস করা হলো যাতে কণ্ঠ পরিষ্কার ও স্বাভাবিক থাকে
     communicate = edge_tts.Communicate(text, VOICE)
     audio_data = bytearray()
     async for chunk in communicate.stream():
@@ -29,11 +28,10 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
             self.wfile.write("Text missing!".encode('utf-8'))
             return
 
-        # ইমোজি বা অপ্রয়োজনীয় ক্যারেক্টার ক্লিন করা
+        # অপ্রয়োজনীয় ক্যারেক্টার ক্লিন করা
         clean_text = re.sub(r'[()\[\]*#_~]', '', raw_text).strip()[:300]
 
         try:
-            # অ্যাসিনক্রোনাস ভয়েস জেনারেট করা
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
             audio_bytes = loop.run_until_complete(generate_emotional_audio(clean_text))
@@ -42,7 +40,8 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
             self.send_response(200)
             self.send_header('Content-type', 'audio/mpeg')
             self.send_header('Access-Control-Allow-Origin', '*')
-            self.send_header('Cache-Control', 'public, max-age=86400')
+            # ক্যাশ পুরোপুরি বন্ধ রাখার হেডার
+            self.send_header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
             self.end_headers()
             self.wfile.write(audio_bytes)
         except Exception as e:
