@@ -1,62 +1,29 @@
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from urllib.parse import urlparse, parse_qs
-import urllib.request
-import json
+import asyncio
+import edge_tts
+import os
 import re
 
-# তোমার ElevenLabs API Key গুলো এখানে থাকবে
-API_KEYS = [
-    "sk_78f12d0fd5f2d4c8067045d24e86c35a89e79211451bb3ec",
-    "sk_76c7f6d8eb286bcce3419c017b88ece946b402d11b02af1e"
-]
+# মাইক্রোসফটের ন্যাচারাল ও মিষ্টি বাংলা ফিমেল ভয়েস
+VOICE = "bn-BD-NabanitaNeural"
 
-current_key_index = 0
-
-def get_next_api_key():
-    global current_key_index
-    if not API_KEYS:
-        return None
-    key = API_KEYS[current_key_index]
-    current_key_index = (current_key_index + 1) % len(API_KEYS)
-    return key
-
-def generate_elevenlabs_voice(text):
-    voice_id = "21m00Tcm4TlvDq8ikWAM" 
+async def generate_emotional_audio(text):
+    # কোডের মাধ্যমে পিচ ও স্পিড কন্ট্রোল করে মারিয়ার গলায় কিউট ইমোশন আনা হলো
+    ssml_text = f"""<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="bn-BD">
+        <voice name="{VOICE}">
+            <prosody rate="+5%" pitch="+12%">
+                {text}
+            </prosody>
+        </voice>
+    </speak>"""
     
-    for _ in range(len(API_KEYS)):
-        api_key = get_next_api_key()
-        if not api_key:
-            raise Exception("API Key পাওয়া যায়নি!")
-
-        url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}"
-        headers = {
-            "Accept": "audio/mpeg",
-            "Content-Type": "application/json",
-            "xi-api-key": api_key
-        }
-        data = {
-            "text": text,
-            "model_id": "eleven_multilingual_v2",
-            "voice_settings": {
-                "stability": 0.35,
-                "similarity_boost": 0.8
-            }
-        }
-
-        req = urllib.request.Request(url, data=json.dumps(data).encode('utf-8'), headers=headers, method='POST')
-        try:
-            with urllib.request.urlopen(req) as response:
-                return response.read()
-        except urllib.error.HTTPError as e:
-            # কোটা শেষ হলে (401, 402 বা 429) পরের কি-তে সুইচ করবে
-            if e.code == 401 or e.code == 402 or e.code == 429:
-                continue
-            else:
-                raise Exception(f"ElevenLabs Error: {e.reason}")
-        except Exception as e:
-            raise e
-
-    raise Exception("সবগুলো API Key এর কোটা শেষ হয়ে গেছে!")
+    communicate = edge_tts.Communicate(ssml_text, VOICE)
+    audio_data = bytearray()
+    async for chunk in communicate.stream():
+        if chunk["type"] == "audio":
+            audio_data.extend(chunk["data"])
+    return bytes(audio_data)
 
 class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
     def do_GET(self):
@@ -70,11 +37,16 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
             self.wfile.write("Text missing!".encode('utf-8'))
             return
 
-        clean_text = re.sub(r'[\U00010000-\U0010ffff]', '', raw_text)
-        clean_text = re.sub(r'[()\[\]*#_~]', '', clean_text).strip()[:200]
+        # ইমোজি বা অপ্রয়োজনীয় ক্যারেক্টার ক্লিন করা
+        clean_text = re.sub(r'[()\[\]*#_~]', '', raw_text).strip()[:300]
 
         try:
-            audio_bytes = generate_elevenlabs_voice(clean_text)
+            # অ্যাসিনক্রোনাস ভয়েস জেনারেট করা
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            audio_bytes = loop.run_until_complete(generate_emotional_audio(clean_text))
+            loop.close()
+
             self.send_response(200)
             self.send_header('Content-type', 'audio/mpeg')
             self.send_header('Access-Control-Allow-Origin', '*')
@@ -87,7 +59,8 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(f"TTS Error: {str(e)}".encode('utf-8'))
 
-def run(server_class=HTTPServer, handler_class=SimpleHTTPRequestHandler, port=10000):
+def run(server_class=HTTPServer, handler_class=SimpleHTTPRequestHandler):
+    port = int(os.environ.get("PORT", 10000))
     server_address = ('', port)
     httpd = server_class(server_address, handler_class)
     print(f"Server running on port {port}...")
