@@ -4,7 +4,7 @@ from http.server import HTTPServer, BaseHTTPRequestHandler
 from urllib.parse import urlparse, parse_qs, unquote
 import edge_tts
 
-# মাইক্রোসফটের আসল, অবিকৃত ন্যাচারাল বাংলা ফিমেল ভয়েস
+# মাইক্রোসফটের আসল ন্যাচারাল বাংলা ফিমেল ভয়েস
 VOICE = "bn-BD-NabanitaNeural"
 
 async def generate_audio(text):
@@ -31,10 +31,15 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
             if not raw_text:
                 raw_text = "বলো সোনা"
 
-            # কোনো রেজেক্স দিয়ে বাংলা টেক্সট বা বর্ণ কাটা হয়নি, একদম ন্যাচারাল রাখা হয়েছে
+            # টেক্সট যেন পরিষ্কার থাকে
             clean_text = raw_text[:300]
 
+            # ভয়েস জেনারেট করার চেষ্টা
             audio_bytes = asyncio.run(generate_audio(clean_text))
+
+            # যদি কোনো কারণে অডিও খালি আসে, তবে ফলব্যাক টেক্সট পাঠানো হবে
+            if not audio_bytes:
+                raise Exception("Empty audio generated")
 
             self.send_response(200)
             self.send_header('Content-type', 'audio/mpeg')
@@ -42,11 +47,15 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
             self.send_header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
             self.end_headers()
             self.wfile.write(audio_bytes)
+
         except Exception as e:
+            # সার্ভারে কোনো সমস্যা হলে ব্রাউজার যেন ভুলভাল অডিও না বাজায়, তাই স্ট্যাটাস কোড এবং প্লেন টেক্সট পাঠানো হলো
+            print(f"TTS Error: {str(e)}")
             self.send_response(500)
             self.send_header('Content-type', 'text/plain; charset=utf-8')
+            self.send_header('Access-Control-Allow-Origin', '*')
             self.end_headers()
-            self.wfile.write(f"Error: {str(e)}".encode('utf-8'))
+            self.wfile.write(b"") # খালি বাইট পাঠানো হলো যাতে ব্রাউজার ক্র্যাশ বা উলটপালট না করে
 
 def run():
     port = int(os.environ.get("PORT", 10000))
