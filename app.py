@@ -1,11 +1,10 @@
 import asyncio
 import os
-import re
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from urllib.parse import urlparse, parse_qs, unquote
 import edge_tts
 
-# মাইক্রোসফটের আসল ন্যাচারাল বাংলা ফিমেল ভয়েস (নবনিতা)
+# মাইক্রোসফটের আসল, অবিকৃত ন্যাচারাল বাংলা ফিমেল ভয়েস
 VOICE = "bn-BD-NabanitaNeural"
 
 async def generate_audio(text):
@@ -32,12 +31,9 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
             if not raw_text:
                 raw_text = "বলো সোনা"
 
-            # টেক্সট একদম নিখুঁত রাখতে শুধু প্রয়োজনীয় অক্ষর রাখা হলো
-            clean_text = re.sub(r'[^\w\s,.-]', '', raw_text).strip()[:300]
-            if not clean_text:
-                clean_text = "শুনছি"
+            # কোনো রেজেক্স দিয়ে বাংলা টেক্সট বা বর্ণ কাটা হয়নি, একদম ন্যাচারাল রাখা হয়েছে
+            clean_text = raw_text[:300]
 
-            # asyncio.run দিয়ে লুপের যেকোনো ঝামেলা চিরতরে সমাধান করা হলো
             audio_bytes = asyncio.run(generate_audio(clean_text))
 
             self.send_response(200)
