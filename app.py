@@ -9,7 +9,14 @@ import re
 VOICE = "bn-BD-NabanitaNeural"
 
 async def generate_emotional_audio(text):
-    communicate = edge_tts.Communicate(text, VOICE)
+    # edge-tts এর বিল্ট-ইন rate এবং pitch দিয়ে ভয়েসকে প্রাণবন্ত ও মিষ্টি করা হলো
+    communicate = edge_tts.Communicate(
+        text=text, 
+        voice=VOICE, 
+        rate="+5%",     # সামান্য চটপটে ও প্রাণবন্ত গতি
+        pitch="+4Hz"    # মিষ্টি ও কিউট ফিমেল পিচ
+    )
+    
     audio_data = bytearray()
     async for chunk in communicate.stream():
         if chunk["type"] == "audio":
@@ -20,7 +27,7 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         parsed_path = urlparse(self.path)
         
-        # বাংলা টেক্সট সঠিকভাবে UTF-8 এ ডিকোড করার জন্য unquote ব্যবহার করা হলো
+        # বাংলা টেক্সট সঠিকভাবে UTF-8 এ ডিকোড করা
         query_string = parsed_path.query
         raw_text = ""
         
@@ -38,7 +45,7 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
             self.wfile.write("Text missing!".encode('utf-8'))
             return
 
-        # ইমোজি বা অপ্রয়োজনীয় ক্যারেক্টার ক্লিন করা
+        # অপ্রয়োজনীয় ক্যারেক্টার ক্লিন করা
         clean_text = re.sub(r'[()\[\]*#_~]', '', raw_text).strip()[:300]
 
         try:
