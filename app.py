@@ -5,10 +5,8 @@ import edge_tts
 import re
 
 async def generate_voice(text):
-    # মাইক্রোসফটের আসল মিষ্টি আবেগভরা বাঙালি নারীকণ্ঠ
     voice = "bn-BD-NabanitaNeural"
-    # পিচ এবং স্পিড সামান্য বাড়িয়ে আরও কিউট ও ন্যাচারাল করা হয়েছে
-    communicate = edge_tts.Communicate(text, voice, pitch="+12Hz", rate="+5%")
+    communicate = edge_tts.Communicate(text, voice, pitch="+22Hz", rate="+8%")
     audio_data = bytearray()
     async for chunk in communicate.stream():
         if chunk["type"] == "audio":
