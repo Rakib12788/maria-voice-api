@@ -5,17 +5,13 @@ import edge_tts
 import os
 import re
 
-# মাইক্রোসফটের ন্যাচারাল ও মিষ্টি বাংলা ফিমেল ভয়েস
+# মাইক্রোসফটের আসল এবং ডিফল্ট ন্যাচারাল বাংলা ভয়েস (নবনিতা)
 VOICE = "bn-BD-NabanitaNeural"
 
-async def generate_emotional_audio(text):
-    # edge-tts এর বিল্ট-ইন rate এবং pitch দিয়ে ভয়েসকে প্রাণবন্ত ও মিষ্টি করা হলো
-    communicate = edge_tts.Communicate(
-        text=text, 
-        voice=VOICE, 
-        rate="+5%",     # সামান্য চটপটে ও প্রাণবন্ত গতি
-        pitch="+4Hz"    # মিষ্টি ও কিউট ফিমেল পিচ
-    )
+async def generate_natural_audio(text):
+    # মাইক্রোসফটের ডিফল্ট ন্যাচারাল ভয়েস পেতে কোনো কাস্টম পিচ বা রেট দেওয়া হলো না 
+    # যাতে কণ্ঠ একদম নিখুঁত, পরিষ্কার এবং আসল মাইক্রোসফট স্টাইলের হয়।
+    communicate = edge_tts.Communicate(text, VOICE)
     
     audio_data = bytearray()
     async for chunk in communicate.stream():
@@ -26,8 +22,6 @@ async def generate_emotional_audio(text):
 class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         parsed_path = urlparse(self.path)
-        
-        # বাংলা টেক্সট সঠিকভাবে UTF-8 এ ডিকোড করা
         query_string = parsed_path.query
         raw_text = ""
         
@@ -45,13 +39,17 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
             self.wfile.write("Text missing!".encode('utf-8'))
             return
 
-        # অপ্রয়োজনীয় ক্যারেক্টার ক্লিন করা
-        clean_text = re.sub(r'[()\[\]*#_~]', '', raw_text).strip()[:300]
+        # টেক্সট একদম পরিষ্কার করা যাতে কোনো অদ্ভুত সিম্বল বা মার্কডাউন ভয়েস ইঞ্জিনকে confuse না করে
+        clean_text = re.sub(r'[()\[\]*#_~`!@$%^&+=|\:;""\'<>,.?/]', ' ', raw_text)
+        clean_text = re.sub(r'\s+', ' ', clean_text).strip()[:300]
+
+        if not clean_text:
+            clean_text = "বলো সোনা"
 
         try:
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
-            audio_bytes = loop.run_until_complete(generate_emotional_audio(clean_text))
+            audio_bytes = loop.run_until_complete(generate_natural_audio(clean_text))
             loop.close()
 
             self.send_response(200)
@@ -75,3 +73,4 @@ def run(server_class=HTTPServer, handler_class=SimpleHTTPRequestHandler):
 
 if __name__ == '__main__':
     run()
+            
