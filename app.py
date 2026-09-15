@@ -1,5 +1,5 @@
 from http.server import HTTPServer, BaseHTTPRequestHandler
-from urllib.parse import urlparse, parse_qs
+from urllib.parse import urlparse, parse_qs, unquote
 import asyncio
 import edge_tts
 import os
@@ -18,8 +18,18 @@ async def generate_emotional_audio(text):
 
 class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
     def do_GET(self):
-        query = parse_qs(urlparse(self.path).query)
-        raw_text = query.get('text', [''])[0].strip()
+        parsed_path = urlparse(self.path)
+        
+        # বাংলা টেক্সট সঠিকভাবে UTF-8 এ ডিকোড করার জন্য unquote ব্যবহার করা হলো
+        query_string = parsed_path.query
+        raw_text = ""
+        
+        for param in query_string.split('&'):
+            if param.startswith('text='):
+                raw_text = unquote(param[5:], encoding='utf-8')
+                break
+
+        raw_text = raw_text.strip()
 
         if not raw_text:
             self.send_response(400)
@@ -28,7 +38,7 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
             self.wfile.write("Text missing!".encode('utf-8'))
             return
 
-        # অপ্রয়োজনীয় ক্যারেক্টার ক্লিন করা
+        # ইমোজি বা অপ্রয়োজনীয় ক্যারেক্টার ক্লিন করা
         clean_text = re.sub(r'[()\[\]*#_~]', '', raw_text).strip()[:300]
 
         try:
@@ -40,7 +50,6 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
             self.send_response(200)
             self.send_header('Content-type', 'audio/mpeg')
             self.send_header('Access-Control-Allow-Origin', '*')
-            # ক্যাশ পুরোপুরি বন্ধ রাখার হেডার
             self.send_header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
             self.end_headers()
             self.wfile.write(audio_bytes)
