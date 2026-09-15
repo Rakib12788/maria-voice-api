@@ -9,10 +9,10 @@ import re
 VOICE = "bn-BD-NabanitaNeural"
 
 async def generate_emotional_audio(text):
-    # কোডের মাধ্যমে পিচ ও স্পিড কন্ট্রোল করে মারিয়ার গলায় কিউট ইমোশন আনা হলো
+    # পিচ এবং স্পিড স্বাভাবিক ও মিষ্টি রাখা হলো যাতে কথা পরিষ্কার ও সুন্দর শোনায়
     ssml_text = f"""<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="bn-BD">
         <voice name="{VOICE}">
-            <prosody rate="+5%" pitch="+12%">
+            <prosody rate="0%" pitch="+3%">
                 {text}
             </prosody>
         </voice>
