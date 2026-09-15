@@ -9,16 +9,8 @@ import re
 VOICE = "bn-BD-NabanitaNeural"
 
 async def generate_emotional_audio(text):
-    # পিচ এবং স্পিড স্বাভাবিক ও মিষ্টি রাখা হলো যাতে কথা পরিষ্কার ও সুন্দর শোনায়
-    ssml_text = f"""<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="bn-BD">
-        <voice name="{VOICE}">
-            <prosody rate="0%" pitch="+3%">
-                {text}
-            </prosody>
-        </voice>
-    </speak>"""
-    
-    communicate = edge_tts.Communicate(ssml_text, VOICE)
+    # কোনো SSML ট্যাগ ছাড়া সরাসরি টেক্সট পাস করা হলো যাতে কণ্ঠ পরিষ্কার ও স্বাভাবিক থাকে
+    communicate = edge_tts.Communicate(text, VOICE)
     audio_data = bytearray()
     async for chunk in communicate.stream():
         if chunk["type"] == "audio":
