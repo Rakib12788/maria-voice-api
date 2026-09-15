@@ -4,7 +4,7 @@ import urllib.request
 import json
 import re
 
-# তোমার দেওয়া দুটি ElevenLabs API Key
+# তোমার ElevenLabs API Key গুলো এখানে থাকবে
 API_KEYS = [
     "sk_78f12d0fd5f2d4c8067045d24e86c35a89e79211451bb3ec",
     "sk_76c7f6d8eb286bcce3419c017b88ece946b402d11b02af1e"
@@ -21,7 +21,6 @@ def get_next_api_key():
     return key
 
 def generate_elevenlabs_voice(text):
-    # মারিয়ার জন্য কিউট ও মিষ্টি কণ্ঠের ভয়েস আইডি (Rachel)
     voice_id = "21m00Tcm4TlvDq8ikWAM" 
     
     for _ in range(len(API_KEYS)):
@@ -39,7 +38,7 @@ def generate_elevenlabs_voice(text):
             "text": text,
             "model_id": "eleven_multilingual_v2",
             "voice_settings": {
-                "stability": 0.35,      # ইমোশন ও এক্সপ্রেশন বাড়ানোর জন্য
+                "stability": 0.35,
                 "similarity_boost": 0.8
             }
         }
@@ -49,8 +48,8 @@ def generate_elevenlabs_voice(text):
             with urllib.request.urlopen(req) as response:
                 return response.read()
         except urllib.error.HTTPError as e:
-            # কোটা শেষ হলে পরের কি-তে সুইচ করবে
-            if e.code == 401 or e.code == 429:
+            # কোটা শেষ হলে (401, 402 বা 429) পরের কি-তে সুইচ করবে
+            if e.code == 401 or e.code == 402 or e.code == 429:
                 continue
             else:
                 raise Exception(f"ElevenLabs Error: {e.reason}")
@@ -96,4 +95,3 @@ def run(server_class=HTTPServer, handler_class=SimpleHTTPRequestHandler, port=10
 
 if __name__ == '__main__':
     run()
-    
